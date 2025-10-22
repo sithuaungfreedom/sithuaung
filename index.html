@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>မြန်မာ့အလုပ်သမားရေးရာ AI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Padauk Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Padauk', sans-serif;
+        }
+        /* Custom scrollbar for chat window */
+        #chat-window::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-window::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        #chat-window::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+        #chat-window::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <!-- Chat Container -->
+    <div class="w-full max-w-3xl h-[90vh] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 shadow-md">
+            <h1 class="text-xl md:text-2xl font-bold text-center">Myanmar Labour Insight</h1>
+            <p class="text-center text-sm text-blue-100">မြန်မာ့အလုပ်သမားရေးရာ AI</p>
+        </header>
+        
+        <!-- Chat Window -->
+        <main id="chat-window" class="flex-1 p-6 space-y-5 overflow-y-auto bg-gray-50">
+            <!-- AI Welcome Message -->
+            <div class="ai-message flex justify-start">
+                <div class="max-w-[80%] bg-gray-200 text-gray-800 p-3 rounded-t-lg rounded-r-lg shadow">
+                    <p class="font-bold text-blue-700 mb-1">Myanmar Labour Insight</p>
+                    <p>မင်္ဂလာပါခင်ဗျာ။ ကျွန်ုပ်သည် "Myanmar Labour Insight" ဖြစ်ပါသည်။ မြန်မာနိုင်ငံ၏ အလုပ်သမားရေးရာ ကိစ္စရပ်များနှင့် ပတ်သက်၍ သိရှိလိုသည်များကို မေးမြန်းနိုင်ပါသည်။</p>
+                    <p class="text-xs text-gray-600 mt-3">
+                        **သတိပေးချက်:** ကျွန်ုပ်သည် တရားဝင် ဥပဒေ အကြံဉာဏ် (Legal Advice) ပေးသူ မဟုတ်ပါ။ တိကျသော ကိစ္စရပ်များအတွက် ဥပဒေပညာရှင်နှင့် တိုင်ပင်ပါ။
+                    </p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="p-4 text-sm text-gray-500 hidden items-center justify-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            AI စဉ်းစားနေသည်...
+        </div>
+
+        <!-- Input Form -->
+        <form id="input-form" class="p-4 bg-white border-t border-gray-200 flex items-center space-x-3">
+            <input type="text" id="user-input" class="flex-1 w-full border border-gray-300 rounded-full py-3 px-5 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="မေးခွန်းတစ်ခု မေးမြန်းပါ..." autocomplete="off">
+            <button type="submit" class="bg-blue-600 text-white rounded-full p-3 shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+        </form>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const chatWindow = document.getElementById('chat-window');
+        const inputForm = document.getElementById('input-form');
+        const userInput = document.getElementById('user-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // --- AI Configuration ---
+        const API_KEY = "AIzaSyCoLhduQF8PjuUx50PWAv6hPAD5uB1X7Jo"; // <--- ဤနေရာတွင် သင်ရလာသော API Key ကို ကူးထည့်ပါ။
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+        
+        // ဤသည်မှာ AI ၏ Persona ဖြစ်သည်။ သင်၏ မူလ prompt ကို အတိအကျ အသုံးပြုထားပါသည်။
+        const SYSTEM_INSTRUCTION = `သင်သည် "Myanmar Labour Insight" ဖြစ်သည်။ သင်၏ အဓိကတာဝန်မှာ မြန်မာနိုင်ငံ၏ အလုပ်သမားရေးရာ ကိစ္စရပ်များနှင့် ပတ်သက်၍ မေးမြန်းလာသမျှကို တိကျသော၊ ဘက်မလိုက်သော၊ နှင့် နောက်ဆုံးရ အချက်အလက်များ (up-to-date) ဖြင့် ဖြေကြားရန် ဖြစ်သည်။ သင်သည် အလုပ်သမားတစ်ဦး၊ အလုပ်ရှင်တစ်ဦး၊ သုတေသီတစ်ဦး၊ သို့မဟုတ် စိတ်ဝင်စားသူတစ်ဦးဦး၏ မေးခွန်းများကို ဖြေဆိုနိုင်ရမည်။
+
+အဓိက ဗဟုသုတ နယ်ပယ်များ:
+- မြန်မာနိုင်ငံ၏ အလုပ်သမား ဥပဒေများ (အလုပ်အကိုင်၊ အဖွဲ့အစည်း၊ အငြင်းပွားမှု၊ လူမှုဖူလုံရေး၊ အနည်းဆုံးအခကြေးငွေ၊ ခွင့်ရက် စသည်)
+- အဓိက အဖွဲ့အစည်းများ (SAC အလုပ်သမားဝန်ကြီးဌာန၊ NUG အလုပ်သမားဝန်ကြီးဌာန၊ ILO၊ CTUM)
+- လက်ရှိ အရေးကြီး ကိစ္စရပ်များ (၂၀၂၁ နောက်ပိုင်း အခွင့်အရေး၊ စစ်မှုထမ်းဥပဒေ သက်ရောက်မှု၊ ရွှေ့ပြောင်းအလုပ်သမား)
+
+ဖြေဆိုရာတွင် လိုက်နာရမည့် စည်းမျဉ်းများ:
+၁။ တိကျမှုနှင့် ရင်းမြစ်ကိုးကားခြင်း: ဥပဒေပုဒ်မ၊ အစီရင်ခံစာ (ဥပမာ - "ILO ၏ ၂၀၂၄ ခုနှစ် အစီရင်ခံစာအရ...") ကို တတ်နိုင်သမျှ ကိုးကားပါ။
+၂။ ဘက်မလိုက်မှု: နိုင်ငံရေး သဘောတရားထက် အချက်အလက်ကိုသာ အခြေခံပါ။ "မည်သည့် အဖွဲ့အစည်းက မည်သို့ ပြောဆိုသည်" ဟု မျှတစွာ တင်ပြပါ။
+၃။ တရားဝင် ဥပဒေ အကြံဉာဏ် မဟုတ်ကြောင်း သတိပေးခြင်း: "ကျွန်ုပ်သည် ရှေ့နေတစ်ဦး မဟုတ်သဖြင့် တရားဝင် အကြံဉာဏ် မပေးနိုင်ပါ" ဟု အစတွင် သို့မဟုတ် အဆုံးတွင် ထည့်ပါ။ "တိကျသော အကြံဉာဏ်အတွက် အရည်အချင်းပြည့်မီသော ဥပဒေပညာရှင် သို့မဟုတ် အလုပ်သမားရေးရာ ကျွမ်းကျင်သူနှင့် တိုင်ပင်သင့်ပါသည်" ဟု အမြဲ ထည့်သွင်း သတိပေးရမည်။
+၄။ ဘေးကင်းလုံခြုံမှု: အသုံးပြုသူကို အန္တရာယ်ဖြစ်စေနိုင်သော အကြံဉာဏ်များ (ဥပမာ - ဆန္ဒပြရန်) ကို လုံးဝ မပေးရ။
+၅။ ဘာသာစကား: မြန်မာဘာသာကို အဓိကထား ဖြေဆိုပါ။`;
+
+        // --- Conversation History ---
+        let chatHistory = [];
+
+        // --- Event Listeners ---
+        inputForm.addEventListener('submit', handleSubmit);
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            const prompt = userInput.value.trim();
+            if (!prompt) return;
+
+            // 1. Display user message
+            appendMessage('user', prompt);
+            
+            // 2. Add user prompt to history
+            chatHistory.push({
+                role: "user",
+                parts: [{ text: prompt }]
+            });
+
+            // 3. Clear input and show loading
+            userInput.value = '';
+            loadingIndicator.classList.remove('hidden');
+            loadingIndicator.classList.add('flex');
+            
+            // 4. Fetch AI response
+            try {
+                const aiResponseText = await callGeminiAPI(chatHistory);
+                
+                // 5. Add AI response to history
+                chatHistory.push({
+                    role: "model",
+                    parts: [{ text: aiResponseText }]
+                });
+
+                // 6. Display AI message
+                appendMessage('model', aiResponseText);
+
+            } catch (error) {
+                console.error("API Call Error:", error);
+                
+                // *** IMPROVED ERROR HANDLING ***
+                // API Key Error (400) သို့မဟုတ် အခြား Error များကို UI တွင် ပြသပါ
+                let errorMessage = `တောင်းပန်ပါသည်ခင်ဗျာ။ အခုချိန်မှာ ဆာဗာ အခက်အခဲကြောင့် တုံ့ပြန်နိုင်ခြင်း မရှိသေးပါ။ (Error: ${error.message})`;
+                
+                if (error.message.includes("400")) {
+                    errorMessage = "API Key Error (Error 400): API Key မမှန်ကန်ပါ (သို့မဟုတ်) မထည့်သွင်းရသေးပါ။ ဤ App သည် အထူးပတ်ဝန်းကျင် (Canvas) တွင်သာ အလုပ်လုပ်ရန် တည်ဆောက်ထားပါသည်။";
+                } else if (error.message.includes("429")) {
+                    errorMessage = "တောင်းဆိုမှုများ အလွန်များနေပါသည်။ ခေတ္တစောင့်ပြီးမှ ထပ်မံကြိုးစားကြည့်ပါ။ (Error 429)";
+                } else if (error.message.includes("Failed to fetch")) {
+                    errorMessage = "အင်တာနက် ချိတ်ဆက်မှု အခက်အခဲ ရှိနေပါသည်။ (Error: Failed to fetch)";
+                }
+
+                appendMessage('error', errorMessage);
+                
+                // History မှ နောက်ဆုံး မအောင်မြင်သော user prompt ကို ဖယ်ရှားပါ
+                chatHistory.pop();
+
+            } finally {
+                // 7. Hide loading
+                loadingIndicator.classList.add('hidden');
+                loadingIndicator.classList.remove('flex');
+                userInput.focus(); // Re-focus on the input
+            }
+        }
+
+        // --- API Call Function (with Retry) ---
+        async function callGeminiAPI(history, retries = 3, delay = 1000) {
+            const payload = {
+                contents: history,
+                systemInstruction: {
+                    parts: [{ text: SYSTEM_INSTRUCTION }]
+                },
+                generationConfig: {
+                    temperature: 0.7,
+                    topK: 40,
+                    topP: 0.95,
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    // Handle specific errors like 429 (Too Many Requests) or 5xx (Server Errors)
+                    if ((response.status === 429 || response.status >= 500) && retries > 0) {
+                        console.warn(`API Error: Status ${response.status}. Retrying in ${delay}ms... (${retries} retries left)`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return callGeminiAPI(history, retries - 1, delay * 2); // Exponential backoff
+                    }
+                    // *** IMPROVED ERROR ***
+                    // Throw error with status text to be caught by handleSubmit
+                    throw new Error(`${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0) {
+                    // Check for safety ratings or blocked content
+                    if (result.candidates[0].finishReason === 'SAFETY') {
+                        return "တောင်းပန်ပါသည်ခင်ဗျာ။ သင်၏တောင်းဆိုချက်သည် လုံခြုံရေးဆိုင်ရာ မူဝါဒများနှင့် မကိုက်ညီသောကြောင့် ဖြေကြားပေးနိုင်ခြင်း မရှိပါ။";
+                    }
+                    if (result.candidates[0].content && result.candidates[0].content.parts[0].text) {
+                        return result.candidates[0].content.parts[0].text;
+                    }
+                }
+                
+                // Handle cases where no text is returned
+                return "AI ထံမှ အဖြေ မရရှိပါ။ ကျေးဇူးပြု၍ နောက်တစ်ကြိမ် ကြိုးစားကြည့်ပါ။";
+
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                if (retries > 0 && !error.message.includes("400")) { // 400 error (API Key) ကို retry မလုပ်ပါ
+                    console.warn(`Fetch failed. Retrying in ${delay}ms... (${retries} retries left)`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return callGeminiAPI(history, retries - 1, delay * 2); // Exponential backoff for network errors
+                }
+                throw error; // Re-throw error after retries are exhausted
+            }
+        }
+
+        // --- UI Helper Functions ---
+        
+        /**
+         * Appends a message to the chat window.
+         * @param {string} role - 'user', 'model' (for AI), or 'error'
+         * @param {string} text - The message content
+         */
+        function appendMessage(role, text) {
+            const messageWrapper = document.createElement('div');
+            const messageBubble = document.createElement('div');
+            
+            if (role === 'user') {
+                messageWrapper.classList.add('user-message', 'flex', 'justify-end');
+                messageBubble.classList.add('max-w-[80%]', 'bg-blue-600', 'text-white', 'p-3', 'rounded-t-lg', 'rounded-l-lg', 'shadow');
+                // *** FIX: Use textContent for user messages ***
+                messageBubble.textContent = text;
+            
+            } else if (role === 'model') {
+                // *** FIX: Apply Markdown parse ONLY for model ***
+                const formattedText = simpleMarkdownParse(text);
+                messageWrapper.classList.add('ai-message', 'flex', 'justify-start');
+                messageBubble.classList.add('max-w-[80%]', 'bg-gray-200', 'text-gray-800', 'p-3', 'rounded-t-lg', 'rounded-r-lg', 'shadow');
+                messageBubble.innerHTML = `
+                    <p class="font-bold text-blue-700 mb-1">Myanmar Labour Insight</p>
+                    ${formattedText}
+                `;
+            
+            } else if (role === 'error') {
+                messageWrapper.classList.add('ai-message', 'flex', 'justify-start');
+                messageBubble.classList.add('max-w-[80%]', 'bg-red-100', 'text-red-800', 'border', 'border-red-300', 'p-3', 'rounded-lg', 'shadow');
+                // *** FIX: Use textContent for error messages ***
+                messageBubble.innerHTML = `<p class="font-bold mb-1">Error</p><p>${text.replace(/\n/g, '<br>')}</p>`;
+            }
+
+            messageWrapper.appendChild(messageBubble);
+            chatWindow.appendChild(messageWrapper);
+            
+            // Scroll to the bottom
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        /**
+         * Simple Markdown to HTML parser
+         * Supports: **bold**, *italic*, \`code\`, and newlines
+         */
+        function simpleMarkdownParse(text) {
+            // Escape HTML tags first to prevent XSS
+            let safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            return safeText
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **bold**
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')     // *italic*
+                .replace(/`(.*?)`/g, '<code class="bg-gray-100 p-1 rounded text-sm">$1</code>') // `code`
+                .replace(/\n/g, '<br>'); // newlines
+        }
+    </script>
+</body>
+</html>
+
